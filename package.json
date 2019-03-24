@@ -1,0 +1,28 @@
+{
+  "name": "streamable-downloader",
+  "version": "1.0.0",
+  "description": "📽️ batch download videos from streamable.com",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/qwazwsx/streamable-downloader.git"
+  },
+  "keywords": [
+    "streamable",
+    "download",
+    "batch",
+    "rip"
+  ],
+  "author": "qwazwsx",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/qwazwsx/streamable-downloader/issues"
+  },
+  "homepage": "https://github.com/qwazwsx/streamable-downloader#readme",
+  "dependencies": {
+    "request": "^2.88.0"
+  }
+}
