@@ -24,7 +24,7 @@ args[1] = args[1] === undefined ? concurrentDefault : args[1]
 
 // make sure concurrent requests isnt NaN
 if (isNaN(args[1])) {
-  console.warn('[WARNING] concurrent requests argument is NaN, resetting to default (3)')
+  console.warn('[WARNING] concurrent requests argument is NaN, resetting to default ('+ concurrentDefault +')')
   args[1] = concurrentDefault
 }
 
