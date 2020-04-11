@@ -48,12 +48,11 @@ async function queueVideosFromPage(page, queue) {
     const res = await fetch(url, { headers: { cookie } })
     const { videos } = await res.json()
 
-    for (let i = 0; i < videos.length; i++) {
-      // push video to queue
-      queue.push({ video: videos[i] }, err => {
+    videos.forEach(video => {
+      queue.push({ video }, err => {
         if (err) throw err
       })
-    }
+    })
 
     return videos.length
   } catch (err) {
@@ -73,9 +72,9 @@ async function downloadVideos() {
   // create a queue worker
   const totalVideos = await fetchTotal()
   let videosDownloaded = 0
-  const queue = Queue((task, callback) => {
-    var file = Object.keys(task.video.files)[0]
-    const url = `http:${task.video.files[file].url}`
+  const queue = Queue(({ video }, callback) => {
+    var file = Object.keys(video.files)[0]
+    const url = `http:${video.files[file].url}`
 
     request(url)
       .on('error', err => {
@@ -85,7 +84,7 @@ async function downloadVideos() {
         // Do something after request finishes
         videosDownloaded++
         console.log(
-          `[${videosDownloaded} of ${totalVideos}][${task.video.file_id}] '${task.video.title}'`
+          `[${videosDownloaded} of ${totalVideos}][${video.file_id}] '${video.title}'`
         )
         callback()
       })
@@ -93,7 +92,7 @@ async function downloadVideos() {
       .pipe(
         fs.createWriteStream(
           'videos/' +
-            `${task.video.date_added}-${task.video.title}-${task.video.file_id}.${task.video.ext}`.replace(
+            `${video.date_added}-${video.title}-${video.file_id}.${video.ext}`.replace(
               /[ !\/]/g,
               '_'
             )
