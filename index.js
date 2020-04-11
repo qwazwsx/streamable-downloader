@@ -8,55 +8,108 @@
 const fs = require('fs')
 const request = require('request') // makes HTTP requests
 // var progress = require('request-progress')
-const queue = require('async/queue') // queues up downloads
+const Queue = require('async/queue') // queues up downloads
+const fetch = require('isomorphic-fetch')
 var args = process.argv.slice(2)
-const options = { headers: { cookie: args[0] } } //
-const concurrentDefault = 7
-var downloaded = 0
-var total
+const cookie = args[0]
 
-if (args[0] === undefined) {
-  throw Error('NO COOKIES FOUND. Pass in streamable cookies as a string to authenticate the request')
+const CONCURRENT_DOWNLOADS_DEFAULT = 7
+const DOWNLOAD_DIRECTORY = './videos'
+const BASE_API_URL = 'https://ajax.streamable.com/videos'
+
+if (cookie === undefined) {
+  throw Error(
+    'NO COOKIES FOUND. Pass in streamable cookies as a string to authenticate the request'
+  )
 }
 
 // set concurrent requests to default if its unset
-args[1] = args[1] === undefined ? concurrentDefault : args[1]
+let concurrentRequests = args[1] || CONCURRENT_DOWNLOADS_DEFAULT
 
 // make sure concurrent requests isnt NaN
-if (isNaN(args[1])) {
-  console.warn('[WARNING] concurrent requests argument is NaN, resetting to default ('+ concurrentDefault +')')
-  args[1] = concurrentDefault
+if (isNaN(concurrentRequests)) {
+  console.warn(
+    `[WARNING] concurrent requests argument is NaN, resetting to default (${CONCURRENT_DOWNLOADS_DEFAULT})`
+  )
+  concurrentRequests = CONCURRENT_DOWNLOADS_DEFAULT
 }
 
-// yes, using the arbitrary number 99999999999999999999 as the limit is poor practice, but <INSERT EXCUSE>
-request('https://ajax.streamable.com/videos?sort=date_added&sortd=DESC&count=99999999999999999999&page=1', options, (err, response, body) => {
-  if (err) throw err
-  body = JSON.parse(body)
-
-  console.log('GET JSON succeeded - found ' + body.total + ' videos')
-  total = body.total
-
-  // loop over all videos
-  for (let i = 0; i < body.videos.length; i++) {
-    // push video to queue
-    q.push({ video: body.videos[i] }, (err) => {
-      if (err) throw err
-    })
-  }
-})
-
-// create a queue worker
-var q = queue((task, callback) => {
-  var file = Object.keys(task.video.files)[0]
-
-  request('http:' + task.video.files[file].url).on('error', (err) => {
-    if (err) throw err
-  }).on('end', () => {
-    // Do something after request finishes
-    downloaded++
-    console.log('[' + downloaded + '/' + total + '][' + task.video.file_id + '] \'' + task.video.title + '\'')
-    callback()
+async function fetchTotal() {
+  const response = await fetch(`${BASE_API_URL}?count=0`, {
+    headers: { cookie },
   })
-    // save file
-    .pipe(fs.createWriteStream(task.video.file_id + '.' + task.video.ext))
-}, args[1])
+  const { total } = await response.json()
+  return total
+}
+
+async function queueVideosFromPage(page, queue) {
+  const url = `${BASE_API_URL}?sort=date_added&sortd=DESC&count=100&page=${page}`
+  try {
+    const res = await fetch(url, { headers: { cookie } })
+    const { videos } = await res.json()
+
+    for (let i = 0; i < videos.length; i++) {
+      // push video to queue
+      queue.push({ video: videos[i] }, err => {
+        if (err) throw err
+      })
+    }
+
+    return videos.length
+  } catch (err) {
+    throw err
+  }
+}
+
+function createDownloadDirectory(dir) {
+  if (fs.existsSync(dir)) {
+    return
+  }
+
+  fs.mkdirSync(dir)
+}
+
+async function downloadVideos() {
+  // create a queue worker
+  const totalVideos = await fetchTotal()
+  let videosDownloaded = 0
+  const queue = Queue((task, callback) => {
+    var file = Object.keys(task.video.files)[0]
+    const url = `http:${task.video.files[file].url}`
+
+    request(url)
+      .on('error', err => {
+        if (err) throw err
+      })
+      .on('end', () => {
+        // Do something after request finishes
+        videosDownloaded++
+        console.log(
+          `[${videosDownloaded} of ${totalVideos}][${task.video.file_id}] '${task.video.title}'`
+        )
+        callback()
+      })
+      // save file
+      .pipe(
+        fs.createWriteStream(
+          'videos/' +
+            `${task.video.date_added}-${task.video.title}-${task.video.file_id}.${task.video.ext}`.replace(
+              /[ !\/]/g,
+              '_'
+            )
+        )
+      )
+  }, concurrentRequests)
+
+  createDownloadDirectory(DOWNLOAD_DIRECTORY)
+
+  let page = 1
+  let done = false
+  while (!done) {
+    const videosOnPage = await queueVideosFromPage(page, queue)
+    done = videosOnPage === 0
+    page++
+  }
+}
+
+downloadVideos()
