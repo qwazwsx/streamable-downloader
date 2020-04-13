@@ -1,24 +1,20 @@
 # streamable-downloader
-📽️ batch download videos from streamable.com
 
-quick script I wrote because I needed to batch download all of my streamable videos
+📽️ batch download videos from streamable.com.
 
-### USAGE
+## USAGE
 
-`node index.js <cookies> <concurrent request>`
+`tsc -b && node index.js <cookies> <concurrent request>`
 
-**cookies -** string that contains cookies
+**cookies** -- string that contains cookies
 
-**concurrent requests -** optional number of concurrent downloads to allow (default 7)
+**concurrent requests** -- optional number of concurrent downloads to allow (default 7)
 
-ex: `node index.js "upload_speed=123; ... ... ..." 10`
+## HOW TO GET COOKIES FROM STREAMABLE
 
-### HOW TO GET COOKIES FROM STREAMABLE
-
-1. log in to streamable
-2. press F12 (or CTRL+SHIFT+I)
-3. go to the network tab
-4. reload the page (CTRL+R)
-5. find the first entry, it should be titled `streamable.com`
-6. in the headers tab, under `request headers` look for a `cookie` entry
-6. copy the text next to `cookie`, what you copied should look something like this: `upload_speed=123; dashboard=true; user_name="XXX@XXX.XYZ"; is_pro=0; driftt_aid=XXX; DFTT_END_USER_PREV_BOOTSTRAPPED=true; _ga=XXX; session=XXX; __gads=ID=XXX; muted=false; volume=0.15; dark_mode=false; euconsent=XXXX; user_code=XXX`
+1. Open the dev tools in your browser.
+2. Go to the network tab.
+3. Login to streamable.com.
+5. Find the first network request entry; it should be titled `streamable.com`.
+6. In the headers section, under "request headers" look for a `Cookie` entry.
+6. Copy the text (minus the "Cookie" part). What you copied should contain something like this: `user_name="XXX@XXX.XYZ"; is_pro=0; driftt_aid=XXX;`, etc.
